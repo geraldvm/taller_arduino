@@ -6,16 +6,17 @@ from playsound import playsound
 from threading import Thread
 import threading
 import time
-
+from DriverSerial import DriverSerial
 
 
 class Game:
-    def __init__(self):
+    def __init__(self,COM,baudrate):
         self.__ventana=None
         self.__enemy_x=650
         self.__enemy_y=50
         self.__player_x=170
         self.__player_y=140
+        self.__serial= DriverSerial(COM,baudrate)  
         self.__cv= None
 
     #***************Reproducir música***********************
@@ -40,7 +41,24 @@ class Game:
     #Funcion principal
     def main(self):
 
+        def readSerial():
+            while(True):
+                command= self.__serial.read()
+                self.__compareSerial(command)
 
+        def sendSerial():
+            command= self.__serial.send('hola'.encode())
+
+        def th_receiveData():
+            th_time=Thread(target=readSerial, args=())
+            th_time.start()
+
+        def th_sendData():
+            th_time=Thread(target=sendSerial, args=())
+            th_time.start()
+
+        def closeSerial():
+            self.__serial.close()
 
         window = Tk()
         window.title("GAME")
@@ -59,6 +77,10 @@ class Game:
         self.__cv.create_image(170,140, image = ship, tags = "player")
         #self.__cv.create_image(140,enemy_y, image = bullet, tags = "bullet")
 
+        #botonSTART = Button(window, text="START", command=hilo, bg="#096654",fg="white",font=("Helvetica",15)).place(x=400,y=20)
+        botonArduino = Button(window, text="Arduino", command=th_receiveData, bg="#096654",fg="white",font=("Helvetica",15)).place(x=400,y=20)
+        botonLED = Button(window, text="LED", command=th_sendData, bg="#096654",fg="white",font=("Helvetica",15)).place(x=200,y=20)
+        botonCloseUSB = Button(window, text="Close USB", command=closeSerial, bg="#096654",fg="white",font=("Helvetica",15)).place(x=600,y=20)
          #*********************SHELL***************************
 
 
@@ -99,12 +121,44 @@ class Game:
         window.bind("<Right>", right)
         window.mainloop()
     
+    def __compareSerial(self, command):
+        if(command!=None):
+            if(command =='b\r\n'):
+                print("BLUE")
+                self.__player_y-=20
+                x = 0
+                y = -20
+                self.__cv.move("player", x, y)
+                #self.__play("move.mp3")
+            elif(command=="r\r\n"):
+                print("RED")
+                self.__player_y+=20
+                x = 0
+                y = 20
+                self.__cv.move("player", x, y)
+                #self.__play("move.mp3")
+            elif(command=="g\r\n"):
+                print("GREEN")
+                self.__player_x-=20
+                x = -20
+                y = 0
+                self.__cv.move("player", x, y)
+                #play("move.mp3")
+            elif(command=="w\r\n"):
+                #print("White")
+                self.__player_x+=20
+                x = 20
+                y = 0
+                self.__cv.move("player", x, y)
+                #play("move.mp3")
+            else:
+                print(command)
 
         
 
 
 
-x = Game()
+x = Game("COM6",9600)
 x.main()
 
 
